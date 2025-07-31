@@ -1,0 +1,21 @@
+{
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "installCommand": "cd frontend && npm install",
+  "devCommand": "cd frontend && npm run dev",
+  "functions": {
+    "frontend/src/app/**/*.tsx": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_ENVIRONMENT": "@environment",
+    "NEXT_PUBLIC_CONTRACT_ADDRESS": "@contract_address"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_ENVIRONMENT": "@environment"
+    }
+  }
+}

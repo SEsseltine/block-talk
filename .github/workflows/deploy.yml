@@ -6,15 +6,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      deploy_environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-        - staging
-        - production
 
 env:
   FOUNDRY_PROFILE: ci
@@ -139,66 +130,7 @@ jobs:
               
               [View on BaseScan](https://sepolia.basescan.org/address/${{ env.PROXY_ADDRESS }})
               
-              **Frontend:** Will be deployed to Vercel preview automatically.`
+              **Frontend:** Available at http://localhost:3000 with updated contract address.`
             })
 
-  deploy-frontend-staging:
-    needs: deploy-contracts-staging
-    runs-on: ubuntu-latest
-    environment: staging
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: frontend
-          scope: ${{ secrets.VERCEL_ORG_ID }}
-
-  deploy-contracts-production:
-    needs: deploy-contracts-staging
-    if: github.ref == 'refs/heads/main' && github.event.inputs.deploy_environment == 'production'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Deploy to Base Mainnet
-        working-directory: forge
-        run: |
-          forge script script/Deploy.s.sol \
-            --rpc-url ${{ secrets.BASE_MAINNET_RPC_URL }} \
-            --private-key ${{ secrets.BASE_MAINNET_PRIVATE_KEY }} \
-            --broadcast \
-            --verify \
-            --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
-            --gas-limit 5000000 \
-            -vvvv
-        env:
-          PRIVATE_KEY: ${{ secrets.BASE_MAINNET_PRIVATE_KEY }}
-
-  deploy-frontend-production:
-    needs: deploy-contracts-production
-    if: github.ref == 'refs/heads/main' && github.event.inputs.deploy_environment == 'production'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy to Vercel Production
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: frontend
-          scope: ${{ secrets.VERCEL_ORG_ID }}

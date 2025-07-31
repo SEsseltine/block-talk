@@ -57,7 +57,7 @@ jobs:
           npm run lint
 
   deploy-contracts-staging:
-    needs: [test-contracts, test-frontend]
+    needs: [test-contracts]
     if: github.ref == 'refs/heads/main' || github.event.inputs.deploy_environment == 'staging'
     runs-on: ubuntu-latest
     environment: staging

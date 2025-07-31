@@ -1,0 +1,9 @@
+[submodule "forge/lib/forge-std"]
+	path = forge/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+	branch = v1.10.0
+
+[submodule "forge/lib/solady"]
+	path = forge/lib/solady
+	url = https://github.com/vectorized/solady
+	branch = main

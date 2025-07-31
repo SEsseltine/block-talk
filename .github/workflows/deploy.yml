@@ -31,14 +31,12 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Run contract tests
-        run: |
-          cd forge
-          forge test -vvv
+        working-directory: forge
+        run: forge test -vvv
 
       - name: Check contract formatting
-        run: |
-          cd forge  
-          forge fmt --check
+        working-directory: forge
+        run: forge fmt --check
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -85,8 +83,8 @@ jobs:
 
       - name: Deploy to Base Sepolia
         id: deploy-staging
+        working-directory: forge
         run: |
-          cd forge
           forge script script/Deploy.s.sol \
             --rpc-url ${{ secrets.BASE_SEPOLIA_RPC_URL }} \
             --private-key ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }} \
@@ -174,8 +172,8 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Deploy to Base Mainnet
+        working-directory: forge
         run: |
-          cd forge
           forge script script/Deploy.s.sol \
             --rpc-url ${{ secrets.BASE_MAINNET_RPC_URL }} \
             --private-key ${{ secrets.BASE_MAINNET_PRIVATE_KEY }} \

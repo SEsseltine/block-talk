@@ -84,22 +84,32 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Deploy to Base Sepolia
-        uses: block-contract-ci/smart-contract-deploy@main
         id: deploy-staging
-        with:
-          network: base-sepolia
-          rpc-url: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
-          private-key: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
-          deploy-script: script/Deploy.s.sol
-          forge-project-root: forge
-          etherscan-api-key: ${{ secrets.BASESCAN_API_KEY }}
-          verify-contracts: true
-
-      - name: Update frontend contract address
         run: |
-          cd frontend
-          # Update contract address in the contract.ts file
-          sed -i "s/0x0000000000000000000000000000000000000000/${{ steps.deploy-staging.outputs.proxy-address }}/g" src/lib/contract.ts
+          cd forge
+          forge script script/Deploy.s.sol \
+            --rpc-url ${{ secrets.BASE_SEPOLIA_RPC_URL }} \
+            --private-key ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }} \
+            --broadcast \
+            --verify \
+            --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
+            -vvvv
+        env:
+          PRIVATE_KEY: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
+
+      - name: Extract contract address and update frontend
+        run: |
+          cd forge
+          # Extract contract address from deployment.json
+          PROXY_ADDRESS=$(jq -r '.contractAddress' deployment.json)
+          echo "Deployed contract address: $PROXY_ADDRESS"
+          
+          # Update frontend contract address
+          cd ../frontend
+          sed -i "s/0x0000000000000000000000000000000000000000/$PROXY_ADDRESS/g" src/lib/contract.ts
+          
+          # Save address for subsequent steps
+          echo "PROXY_ADDRESS=$PROXY_ADDRESS" >> $GITHUB_ENV
           
       - name: Commit updated contract address
         run: |
@@ -109,7 +119,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update contract address to ${{ steps.deploy-staging.outputs.proxy-address }}"
+            git commit -m "Update contract address to $PROXY_ADDRESS"
             git push
           fi
 
@@ -125,13 +135,11 @@ jobs:
               body: `🚀 **Staging Deployment Complete**
               
               **Smart Contract:**
-              - **Proxy:** \`${{ steps.deploy-staging.outputs.proxy-address }}\`
-              - **Implementation:** \`${{ steps.deploy-staging.outputs.implementation-address }}\`
-              - **Transaction:** \`${{ steps.deploy-staging.outputs.transaction-hash }}\`
-              - **Gas Used:** \`${{ steps.deploy-staging.outputs.gas-used }}\`
-              - **Verified:** \`${{ steps.deploy-staging.outputs.verified }}\`
+              - **Proxy:** \`${{ env.PROXY_ADDRESS }}\`
+              - **Network:** Base Sepolia
+              - **Verification:** Submitted to BaseScan
               
-              [View on BaseScan](https://sepolia.basescan.org/address/${{ steps.deploy-staging.outputs.proxy-address }})
+              [View on BaseScan](https://sepolia.basescan.org/address/${{ env.PROXY_ADDRESS }})
               
               **Frontend:** Will be deployed to Vercel preview automatically.`
             })
@@ -166,16 +174,18 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Deploy to Base Mainnet
-        uses: block-contract-ci/smart-contract-deploy@main
-        with:
-          network: base
-          rpc-url: ${{ secrets.BASE_MAINNET_RPC_URL }}
-          private-key: ${{ secrets.BASE_MAINNET_PRIVATE_KEY }}
-          deploy-script: script/Deploy.s.sol
-          forge-project-root: forge
-          etherscan-api-key: ${{ secrets.BASESCAN_API_KEY }}
-          verify-contracts: true
-          gas-limit: 5000000
+        run: |
+          cd forge
+          forge script script/Deploy.s.sol \
+            --rpc-url ${{ secrets.BASE_MAINNET_RPC_URL }} \
+            --private-key ${{ secrets.BASE_MAINNET_PRIVATE_KEY }} \
+            --broadcast \
+            --verify \
+            --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
+            --gas-limit 5000000 \
+            -vvvv
+        env:
+          PRIVATE_KEY: ${{ secrets.BASE_MAINNET_PRIVATE_KEY }}
 
   deploy-frontend-production:
     needs: deploy-contracts-production

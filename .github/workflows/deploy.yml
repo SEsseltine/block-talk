@@ -99,6 +99,7 @@ jobs:
             --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
             -vvvv
         env:
+          PRIVATE_KEY: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
           BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
 
       - name: Upgrade existing contract
@@ -114,6 +115,7 @@ jobs:
             --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
             -vvvv
         env:
+          PRIVATE_KEY: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
           PROXY_ADDRESS: ${{ vars.PROXY_ADDRESS }}
           BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
 

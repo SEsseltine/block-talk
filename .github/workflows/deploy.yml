@@ -71,7 +71,7 @@ jobs:
 
       - name: Deploy or upgrade contract
         id: deploy
-        uses: ./block-contract-ci
+        uses: sesseltine/block-contract-ci@main
         with:
           network: 'base-sepolia'
           rpc-url: ${{ vars.BASE_SEPOLIA_RPC_URL }}

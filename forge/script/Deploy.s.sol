@@ -31,42 +31,21 @@ contract DeployScript is Script {
         uint256 permanentMessageFee = 0.001 ether;
         proxiedContract.initialize(permanentMessageFee);
 
-        console.log("Contract initialized with permanent message fee:", permanentMessageFee);
+        console.log(
+            "Contract initialized with permanent message fee:",
+            permanentMessageFee
+        );
         console.log("Owner:", proxiedContract.owner());
-        console.log("Permanent message fee:", proxiedContract.permanentMessageFee());
+        console.log(
+            "Permanent message fee:",
+            proxiedContract.permanentMessageFee()
+        );
 
         vm.stopBroadcast();
 
         // Output deployment addresses for GitHub Action to parse
         console.log("Contract deployed at:", proxy);
         console.log("Implementation at:", address(implementation));
-
-        // Save deployment info to file for frontend
-        string memory deploymentInfo = string(
-            abi.encodePacked(
-                "{\n",
-                '  "contractAddress": "',
-                vm.toString(proxy),
-                '",\n',
-                '  "implementationAddress": "',
-                vm.toString(address(implementation)),
-                '",\n',
-                '  "network": "base-sepolia",\n',
-                '  "permanentMessageFee": "',
-                vm.toString(permanentMessageFee),
-                '",\n',
-                '  "deployer": "',
-                vm.toString(deployer),
-                '",\n',
-                '  "deployedAt": "',
-                vm.toString(block.timestamp),
-                '"\n',
-                "}"
-            )
-        );
-
-        vm.writeFile("deployment.json", deploymentInfo);
-        console.log("Deployment info saved to deployment.json");
     }
 }
 
@@ -81,7 +60,10 @@ contract UpgradeScript is Script {
 
         // Deploy new implementation
         BlockTalkMessenger newImplementation = new BlockTalkMessenger();
-        console.log("New implementation deployed at:", address(newImplementation));
+        console.log(
+            "New implementation deployed at:",
+            address(newImplementation)
+        );
 
         // Get the proxy contract
         BlockTalkMessenger proxy = BlockTalkMessenger(proxyAddress);

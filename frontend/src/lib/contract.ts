@@ -91,7 +91,7 @@ export const BLOCK_TALK_ABI = [
 ] as const;
 
 // Contract address - will be set after deployment
-export const CONTRACT_ADDRESS: Address = '0x0000000000000000000000000000000000000000'; // TODO: Update after deployment
+export const CONTRACT_ADDRESS: Address = '0x74c3741FD5B9e549BEa7dA129075B97821F64551'; // Updated with deployed contract
 
 export interface Message {
   sender: Address;

@@ -76,12 +76,14 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
             keccak256(abi.encodePacked(msg.sender, _recipient, _encryptedContent, block.timestamp, messageCounter++));
 
         // Create deterministic conversation hash (smaller address first for consistency)
-        bytes32 conversationHash = _recipient < msg.sender 
+        bytes32 conversationHash = _recipient < msg.sender
             ? keccak256(abi.encodePacked(_recipient, msg.sender))
             : keccak256(abi.encodePacked(msg.sender, _recipient));
 
         emit MessageSent(msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId);
-        emit ConversationMessage(conversationHash, msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId);
+        emit ConversationMessage(
+            conversationHash, msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId
+        );
 
         if (_makePermanent) {
             Message storage message = permanentMessages[messageId];

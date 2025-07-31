@@ -84,6 +84,7 @@ jobs:
           proxy-address: ${{ vars.PROXY_ADDRESS }}
           verify-contracts: 'true'
           etherscan-api-key: ${{ secrets.BASESCAN_API_KEY }}
+          broadcast: 'true'
           
       - name: Update frontend contract address
         working-directory: frontend/src/lib

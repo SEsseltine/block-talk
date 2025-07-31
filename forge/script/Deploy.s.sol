@@ -31,15 +31,9 @@ contract DeployScript is Script {
         uint256 permanentMessageFee = 0.001 ether;
         proxiedContract.initialize(permanentMessageFee);
 
-        console.log(
-            "Contract initialized with permanent message fee:",
-            permanentMessageFee
-        );
+        console.log("Contract initialized with permanent message fee:", permanentMessageFee);
         console.log("Owner:", proxiedContract.owner());
-        console.log(
-            "Permanent message fee:",
-            proxiedContract.permanentMessageFee()
-        );
+        console.log("Permanent message fee:", proxiedContract.permanentMessageFee());
 
         vm.stopBroadcast();
 
@@ -60,10 +54,7 @@ contract UpgradeScript is Script {
 
         // Deploy new implementation
         BlockTalkMessenger newImplementation = new BlockTalkMessenger();
-        console.log(
-            "New implementation deployed at:",
-            address(newImplementation)
-        );
+        console.log("New implementation deployed at:", address(newImplementation));
 
         // Get the proxy contract
         BlockTalkMessenger proxy = BlockTalkMessenger(proxyAddress);

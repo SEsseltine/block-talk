@@ -62,103 +62,35 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     outputs:
-      contract-address: ${{ steps.extract-addresses.outputs.PROXY_ADDRESS }}
-      implementation-address: ${{ steps.extract-addresses.outputs.IMPLEMENTATION_ADDRESS }}
+      contract-address: ${{ steps.deploy.outputs.proxy-address }}
+      implementation-address: ${{ steps.deploy.outputs.implementation-address }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Check if proxy exists
-        id: check-proxy
-        working-directory: forge
-        run: |
-          # Check if proxy address is set in environment
-          if [ -n "${{ vars.PROXY_ADDRESS }}" ]; then
-            echo "PROXY_EXISTS=true" >> $GITHUB_OUTPUT
-            echo "PROXY_ADDRESS=${{ vars.PROXY_ADDRESS }}" >> $GITHUB_OUTPUT
-            echo "Found existing proxy at: ${{ vars.PROXY_ADDRESS }}"
-          else
-            echo "PROXY_EXISTS=false" >> $GITHUB_OUTPUT
-            echo "No proxy address found - will deploy fresh"
-          fi
-
-      - name: Deploy new contract (first time)
-        if: steps.check-proxy.outputs.PROXY_EXISTS == 'false'
-        id: deploy-new
-        working-directory: forge
-        run: |
-          forge script script/Deploy.s.sol:DeployScript \
-            --rpc-url ${{ vars.BASE_SEPOLIA_RPC_URL }} \
-            --private-key ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }} \
-            --broadcast \
-            --verify \
-            --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
-            -vvvv
-        env:
-          PRIVATE_KEY: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
-          BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
-
-      - name: Upgrade existing contract
-        if: steps.check-proxy.outputs.PROXY_EXISTS == 'true'
-        id: upgrade-existing
-        working-directory: forge
-        run: |
-          forge script script/Deploy.s.sol:UpgradeScript \
-            --rpc-url ${{ vars.BASE_SEPOLIA_RPC_URL }} \
-            --private-key ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }} \
-            --broadcast \
-            --verify \
-            --etherscan-api-key ${{ secrets.BASESCAN_API_KEY }} \
-            -vvvv
-        env:
-          PRIVATE_KEY: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
-          PROXY_ADDRESS: ${{ vars.PROXY_ADDRESS }}
-          BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
-
-      - name: Extract contract addresses
-        id: extract-addresses
-        working-directory: forge
-        run: |
-          # Set proxy address based on whether we deployed new or upgraded existing
-          if [ "${{ steps.check-proxy.outputs.PROXY_EXISTS }}" == "false" ]; then
-            # Extract proxy address from deploy logs
-            PROXY_ADDRESS=$(forge script script/Deploy.s.sol:DeployScript --sig "run()" 2>&1 | grep -o "Proxy deployed at: 0x[a-fA-F0-9]\{40\}" | head -1 | cut -d' ' -f4 || echo "")
-            if [ -z "$PROXY_ADDRESS" ]; then
-              # Fallback: try to get from broadcast logs
-              PROXY_ADDRESS=$(find broadcast -name "*.json" -exec jq -r '.transactions[]? | select(.contractName == "ERC1967Proxy") | .contractAddress' {} \; | head -1 || echo "")
-            fi
-            echo "NEW_DEPLOYMENT=true" >> $GITHUB_OUTPUT
-          else
-            # Use existing proxy address
-            PROXY_ADDRESS="${{ vars.PROXY_ADDRESS }}"
-            echo "NEW_DEPLOYMENT=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # Get implementation address from broadcast logs
-          IMPL_ADDRESS=$(find broadcast -name "*.json" -exec jq -r '.transactions[]? | select(.contractName == "BlockTalkMessenger") | .contractAddress' {} \; | head -1 || echo "")
-          
-          echo "PROXY_ADDRESS=$PROXY_ADDRESS" >> $GITHUB_OUTPUT
-          echo "IMPLEMENTATION_ADDRESS=$IMPL_ADDRESS" >> $GITHUB_OUTPUT
-          echo "Proxy Address: $PROXY_ADDRESS"
-          echo "Implementation Address: $IMPL_ADDRESS"
-          
-          # Save for environment
-          echo "PROXY_ADDRESS=$PROXY_ADDRESS" >> $GITHUB_ENV
-          echo "IMPLEMENTATION_ADDRESS=$IMPL_ADDRESS" >> $GITHUB_ENV
+      - name: Deploy or upgrade contract
+        id: deploy
+        uses: ./block-contract-ci
+        with:
+          network: 'base-sepolia'
+          rpc-url: ${{ vars.BASE_SEPOLIA_RPC_URL }}
+          private-key: ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }}
+          deploy-script: 'script/Deploy.s.sol:DeployScript'
+          forge-project-root: 'forge'
+          proxy-address: ${{ vars.PROXY_ADDRESS }}
+          verify-contracts: 'true'
+          etherscan-api-key: ${{ secrets.BASESCAN_API_KEY }}
           
       - name: Update frontend contract address
         working-directory: frontend/src/lib
         run: |
           # Update the contract address in contract.ts
-          sed -i "s/export const CONTRACT_ADDRESS: Address = '0x[a-fA-F0-9]\{40\}';/export const CONTRACT_ADDRESS: Address = '${{ steps.extract-addresses.outputs.PROXY_ADDRESS }}';/g" contract.ts
-          echo "Updated frontend contract address to: ${{ steps.extract-addresses.outputs.PROXY_ADDRESS }}"
+          sed -i "s/export const CONTRACT_ADDRESS: Address = '0x[a-fA-F0-9]\{40\}';/export const CONTRACT_ADDRESS: Address = '${{ steps.deploy.outputs.proxy-address }}';/g" contract.ts
+          echo "Updated frontend contract address to: ${{ steps.deploy.outputs.proxy-address }}"
           
       - name: Commit contract address updates
-        if: steps.extract-addresses.outputs.NEW_DEPLOYMENT == 'true'
+        if: vars.PROXY_ADDRESS == '' || steps.deploy.outputs.proxy-address != vars.PROXY_ADDRESS
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -167,7 +99,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update contract address to ${{ steps.extract-addresses.outputs.PROXY_ADDRESS }}"
+            git commit -m "Update contract address to ${{ steps.deploy.outputs.proxy-address }}"
             git push
           fi
 
@@ -183,13 +115,13 @@ jobs:
               body: `🚀 **Staging Deployment Complete**
               
               **Smart Contract:**
-              - **Proxy:** \`${{ steps.extract-addresses.outputs.PROXY_ADDRESS }}\`
-              - **Implementation:** \`${{ steps.extract-addresses.outputs.IMPLEMENTATION_ADDRESS }}\`
+              - **Proxy:** \`${{ steps.deploy.outputs.proxy-address }}\`
+              - **Implementation:** \`${{ steps.deploy.outputs.implementation-address }}\`
               - **Network:** Base Sepolia
-              - **Verification:** Submitted to BaseScan
-              - **Deployment Type:** ${{ steps.extract-addresses.outputs.NEW_DEPLOYMENT == 'true' && 'New Contract' || 'Upgrade' }}
+              - **Verification:** ${{ steps.deploy.outputs.verified == 'true' && 'Verified' || 'Pending' }}
+              - **Gas Used:** ${{ steps.deploy.outputs.gas-used }}
               
-              [View on BaseScan](https://sepolia.basescan.org/address/${{ steps.extract-addresses.outputs.PROXY_ADDRESS }})
+              [View on BaseScan](https://sepolia.basescan.org/address/${{ steps.deploy.outputs.proxy-address }})
               
               **Frontend:** Available at http://localhost:3000 with updated contract address.`
             })

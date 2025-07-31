@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { type Address } from 'viem';
-import { connectWallet, getConnectedAccount } from '@/lib/wallet';
-import { WalletButton } from '@/components/WalletButton';
-import { RegistrationFlow } from '@/components/RegistrationFlow';
-import { MessagingInterface } from '@/components/MessagingInterface';
+import { connectWallet, getConnectedAccount } from '../lib/wallet';
+import * as contractModule from '../lib/contract';
+
+console.log('Contract module:', contractModule);
+console.log('isRegistered function:', contractModule.isRegistered);
+import { WalletButton } from '../components/WalletButton';
+import { RegistrationFlow } from '../components/RegistrationFlow';
+import { MessagingInterface } from '../components/MessagingInterface';
 
 export default function Home() {
   const [account, setAccount] = useState<Address | null>(null);
@@ -19,11 +23,28 @@ export default function Home() {
 
   const checkConnection = async () => {
     try {
+      console.log('Checking wallet connection...');
       const connectedAccount = await getConnectedAccount();
+      console.log('Connected account:', connectedAccount);
+      
       if (connectedAccount) {
         setAccount(connectedAccount);
-        // TODO: Check if user is registered
-        // setIsRegistered(await isUserRegistered(connectedAccount));
+        
+        // Check if user is registered
+        console.log('Checking registration status for:', connectedAccount);
+        try {
+          const registrationStatus = await contractModule.isRegistered(connectedAccount);
+          console.log(`Registration status for ${connectedAccount}:`, registrationStatus);
+          setIsRegistered(registrationStatus);
+        } catch (regError) {
+          console.error('Failed to check registration status:', regError);
+          // If we can't check registration, assume not registered
+          setIsRegistered(false);
+        }
+      } else {
+        console.log('No account connected');
+        setAccount(null);
+        setIsRegistered(false);
       }
     } catch (error) {
       console.error('Error checking connection:', error);
@@ -38,7 +59,10 @@ export default function Home() {
       const connectedAccount = await connectWallet();
       if (connectedAccount) {
         setAccount(connectedAccount);
-        // TODO: Check registration status
+        // Check registration status
+        const registrationStatus = await contractModule.isRegistered(connectedAccount);
+        setIsRegistered(registrationStatus);
+        console.log(`Connected account ${connectedAccount} registration status:`, registrationStatus);
       }
     } catch (error) {
       console.error('Connection failed:', error);

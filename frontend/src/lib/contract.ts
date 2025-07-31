@@ -6,35 +6,35 @@ export const BLOCK_TALK_ABI = [
   {
     "type": "function",
     "name": "registerPublicKey",
-    "inputs": [{"name": "_publicKey", "type": "bytes32"}],
+    "inputs": [{ "name": "_publicKey", "type": "bytes32" }],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
-    "type": "function", 
+    "type": "function",
     "name": "sendMessage",
     "inputs": [
-      {"name": "_recipient", "type": "address"},
-      {"name": "_encryptedContent", "type": "string"},
-      {"name": "_makePermanent", "type": "bool"}
+      { "name": "_recipient", "type": "address" },
+      { "name": "_encryptedContent", "type": "string" },
+      { "name": "_makePermanent", "type": "bool" }
     ],
     "outputs": [],
     "stateMutability": "payable"
   },
   {
     "type": "function",
-    "name": "getMessage", 
-    "inputs": [{"name": "_messageId", "type": "bytes32"}],
+    "name": "getMessage",
+    "inputs": [{ "name": "_messageId", "type": "bytes32" }],
     "outputs": [
       {
         "name": "",
         "type": "tuple",
         "components": [
-          {"name": "sender", "type": "address"},
-          {"name": "recipient", "type": "address"},
-          {"name": "encryptedContent", "type": "string"},
-          {"name": "timestamp", "type": "uint256"},
-          {"name": "isPermanent", "type": "bool"}
+          { "name": "sender", "type": "address" },
+          { "name": "recipient", "type": "address" },
+          { "name": "encryptedContent", "type": "string" },
+          { "name": "timestamp", "type": "uint256" },
+          { "name": "isPermanent", "type": "bool" }
         ]
       }
     ],
@@ -43,49 +43,49 @@ export const BLOCK_TALK_ABI = [
   {
     "type": "function",
     "name": "getPublicKey",
-    "inputs": [{"name": "_user", "type": "address"}],
-    "outputs": [{"name": "", "type": "bytes32"}],
+    "inputs": [{ "name": "_user", "type": "address" }],
+    "outputs": [{ "name": "", "type": "bytes32" }],
     "stateMutability": "view"
   },
   {
     "type": "function",
     "name": "isRegistered",
-    "inputs": [{"name": "_user", "type": "address"}],
-    "outputs": [{"name": "", "type": "bool"}],
+    "inputs": [{ "name": "_user", "type": "address" }],
+    "outputs": [{ "name": "", "type": "bool" }],
     "stateMutability": "view"
   },
   {
     "type": "function",
     "name": "getUserPermanentMessages",
-    "inputs": [{"name": "_user", "type": "address"}],
-    "outputs": [{"name": "", "type": "bytes32[]"}],
+    "inputs": [{ "name": "_user", "type": "address" }],
+    "outputs": [{ "name": "", "type": "bytes32[]" }],
     "stateMutability": "view"
   },
   {
     "type": "function",
     "name": "permanentMessageFee",
     "inputs": [],
-    "outputs": [{"name": "", "type": "uint256"}],
+    "outputs": [{ "name": "", "type": "uint256" }],
     "stateMutability": "view"
   },
   {
     "type": "event",
     "name": "PublicKeyRegistered",
     "inputs": [
-      {"name": "user", "type": "address", "indexed": true},
-      {"name": "publicKey", "type": "bytes32", "indexed": true}
+      { "name": "user", "type": "address", "indexed": true },
+      { "name": "publicKey", "type": "bytes32", "indexed": true }
     ]
   },
   {
     "type": "event",
     "name": "MessageSent",
     "inputs": [
-      {"name": "sender", "type": "address", "indexed": true},
-      {"name": "recipient", "type": "address", "indexed": true},
-      {"name": "encryptedContent", "type": "string", "indexed": false},
-      {"name": "timestamp", "type": "uint256", "indexed": true},
-      {"name": "isPermanent", "type": "bool", "indexed": false},
-      {"name": "messageId", "type": "bytes32", "indexed": false}
+      { "name": "sender", "type": "address", "indexed": true },
+      { "name": "recipient", "type": "address", "indexed": true },
+      { "name": "encryptedContent", "type": "string", "indexed": false },
+      { "name": "timestamp", "type": "uint256", "indexed": true },
+      { "name": "isPermanent", "type": "bool", "indexed": false },
+      { "name": "messageId", "type": "bytes32", "indexed": false }
     ]
   }
 ] as const;
@@ -120,10 +120,10 @@ export async function registerPublicKey(
   if (!walletClient) {
     throw new Error('Wallet not connected');
   }
-  
+
   // Convert hex string to bytes32
   const publicKeyBytes32 = `0x${publicKeyHex.slice(0, 64).padEnd(64, '0')}` as Hash;
-  
+
   const hash = await walletClient.writeContract({
     account,
     address: CONTRACT_ADDRESS,
@@ -145,9 +145,9 @@ export async function sendMessage(
   if (!walletClient) {
     throw new Error('Wallet not connected');
   }
-  
+
   let value = BigInt(0);
-  
+
   if (makePermanent) {
     // Get permanent message fee
     value = await publicClient.readContract({

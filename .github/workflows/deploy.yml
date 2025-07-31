@@ -77,7 +77,7 @@ jobs:
         working-directory: forge
         run: |
           forge script script/Deploy.s.sol \
-            --rpc-url ${{ secrets.BASE_SEPOLIA_RPC_URL }} \
+            --rpc-url ${{ vars.BASE_SEPOLIA_RPC_URL }} \
             --private-key ${{ secrets.BASE_SEPOLIA_PRIVATE_KEY }} \
             --broadcast \
             --verify \

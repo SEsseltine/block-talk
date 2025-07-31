@@ -217,14 +217,14 @@ export async function isRegistered(userAddress: Address): Promise<boolean> {
   try {
     console.log('Checking if user is registered:', userAddress);
     console.log('Contract address:', CONTRACT_ADDRESS);
-    
+
     const result = await publicClient.readContract({
       address: CONTRACT_ADDRESS,
       abi: BLOCK_TALK_ABI,
       functionName: 'isRegistered',
       args: [userAddress],
     }) as boolean;
-    
+
     console.log(`isRegistered result for ${userAddress}:`, result);
     return result;
   } catch (error) {
@@ -243,22 +243,18 @@ export async function getUserPermanentMessages(userAddress: Address): Promise<Ha
 }
 
 async function tryGetLogsWithClient(client: typeof publicClient, params: { userAddress?: Address; fromBlock: bigint }): Promise<unknown[]> {
+  // Use the ABI constant instead of manually defining the event structure
+  const messageSentEvent = BLOCK_TALK_ABI.find(item => item.type === 'event' && item.name === 'MessageSent');
+
+  if (!messageSentEvent) {
+    throw new Error('MessageSent event not found in ABI');
+  }
+
   if (!params.userAddress) {
     // If no user address provided, get all events (not recommended for production)
     return await client.getLogs({
       address: CONTRACT_ADDRESS,
-      event: {
-        type: 'event',
-        name: 'MessageSent',
-        inputs: [
-          { name: 'sender', type: 'address', indexed: true },
-          { name: 'recipient', type: 'address', indexed: true },
-          { name: 'encryptedContent', type: 'string', indexed: false },
-          { name: 'timestamp', type: 'uint256', indexed: true },
-          { name: 'isPermanent', type: 'bool', indexed: false },
-          { name: 'messageId', type: 'bytes32', indexed: false }
-        ]
-      },
+      event: messageSentEvent,
       fromBlock: params.fromBlock,
     });
   }
@@ -266,18 +262,7 @@ async function tryGetLogsWithClient(client: typeof publicClient, params: { userA
   // Get events where user is sender
   const sentLogs = await client.getLogs({
     address: CONTRACT_ADDRESS,
-    event: {
-      type: 'event',
-      name: 'MessageSent',
-      inputs: [
-        { name: 'sender', type: 'address', indexed: true },
-        { name: 'recipient', type: 'address', indexed: true },
-        { name: 'encryptedContent', type: 'string', indexed: false },
-        { name: 'timestamp', type: 'uint256', indexed: true },
-        { name: 'isPermanent', type: 'bool', indexed: false },
-        { name: 'messageId', type: 'bytes32', indexed: false }
-      ]
-    },
+    event: messageSentEvent,
     args: {
       sender: params.userAddress,
     },
@@ -287,18 +272,7 @@ async function tryGetLogsWithClient(client: typeof publicClient, params: { userA
   // Get events where user is recipient
   const receivedLogs = await client.getLogs({
     address: CONTRACT_ADDRESS,
-    event: {
-      type: 'event',
-      name: 'MessageSent',
-      inputs: [
-        { name: 'sender', type: 'address', indexed: true },
-        { name: 'recipient', type: 'address', indexed: true },
-        { name: 'encryptedContent', type: 'string', indexed: false },
-        { name: 'timestamp', type: 'uint256', indexed: true },
-        { name: 'isPermanent', type: 'bool', indexed: false },
-        { name: 'messageId', type: 'bytes32', indexed: false }
-      ]
-    },
+    event: messageSentEvent,
     args: {
       recipient: params.userAddress,
     },
@@ -307,19 +281,26 @@ async function tryGetLogsWithClient(client: typeof publicClient, params: { userA
 
   // Combine and deduplicate logs
   const allLogs = [...sentLogs, ...receivedLogs];
-  const uniqueLogs = allLogs.filter((log, index, self) => 
+  const uniqueLogs = allLogs.filter((log, index, self) =>
     index === self.findIndex(l => l.transactionHash === log.transactionHash && l.logIndex === log.logIndex)
   );
 
   return uniqueLogs;
 }
 
+async function getRecentBlockNumber(): Promise<bigint> {
+  const currentBlock = await publicClient.getBlockNumber();
+  const blocksIn24Hours = BigInt(50); // Base Sepolia ~2 sec blocks
+  return currentBlock - blocksIn24Hours;
+}
+
 export async function getMessageEvents(
   userAddress?: Address,
-  fromBlock: bigint = BigInt(0)
+  fromBlock?: bigint
 ): Promise<MessageEvent[]> {
-  const params = { userAddress, fromBlock };
-  
+  const startBlock = fromBlock ?? await getRecentBlockNumber();
+  const params = { userAddress, fromBlock: startBlock };
+
   // Try primary client first
   try {
     console.log('Trying primary RPC endpoint...');
@@ -357,7 +338,7 @@ export async function getMessageEvents(
       }));
     } catch (fallbackError: unknown) {
       console.error(`Fallback RPC ${i + 1} failed:`, fallbackError instanceof Error ? fallbackError.message : fallbackError);
-      
+
       // If this is the last fallback, handle gracefully
       if (i === fallbackClients.length - 1) {
         console.warn('All RPC endpoints failed. This may be due to network congestion.');
@@ -366,7 +347,7 @@ export async function getMessageEvents(
       }
     }
   }
-  
+
   // Final fallback
   return [];
 }
@@ -375,14 +356,14 @@ export async function getMessageEvents(
 export function createConversationHash(address1: Address, address2: Address): Hash {
   const addr1 = address1.toLowerCase() as Address;
   const addr2 = address2.toLowerCase() as Address;
-  
+
   // Use smaller address first for consistency (same as contract)
   const orderedAddresses = addr1 < addr2 ? [addr1, addr2] : [addr2, addr1];
-  
+
   // Create hash using same logic as contract: keccak256(abi.encodePacked(addr1, addr2))
   const packedData = encodePacked(['address', 'address'], [orderedAddresses[0] as Address, orderedAddresses[1] as Address]);
   const hash = keccak256(packedData);
-  
+
   return hash;
 }
 
@@ -390,34 +371,32 @@ export function createConversationHash(address1: Address, address2: Address): Ha
 export async function getConversationMessages(
   user1: Address,
   user2: Address,
-  fromBlock: bigint = BigInt(0)
+  fromBlock?: bigint
 ): Promise<MessageEvent[]> {
+  const startBlock = fromBlock ?? await getRecentBlockNumber();
   const conversationHash = createConversationHash(user1, user2);
-  
-  // Try fallback clients one by one
-  for (let i = 0; i < fallbackClients.length; i++) {
+
+  // Use the ABI constant instead of manually defining the event structure
+  const conversationMessageEvent = BLOCK_TALK_ABI.find(item => item.type === 'event' && item.name === 'ConversationMessage');
+
+  if (!conversationMessageEvent) {
+    throw new Error('ConversationMessage event not found in ABI');
+  }
+
+  // Try primary client first, then fallbacks
+  const clients = [publicClient, ...fallbackClients];
+
+  for (let i = 0; i < clients.length; i++) {
     try {
       console.log(`Fetching conversation messages with client ${i + 1}...`);
-      
-      const logs = await fallbackClients[i].getLogs({
+
+      const logs = await clients[i].getLogs({
         address: CONTRACT_ADDRESS,
-        event: {
-          type: 'event',
-          name: 'ConversationMessage',
-          inputs: [
-            { name: 'conversationHash', type: 'bytes32', indexed: true },
-            { name: 'sender', type: 'address', indexed: true },
-            { name: 'recipient', type: 'address', indexed: true },
-            { name: 'encryptedContent', type: 'string', indexed: false },
-            { name: 'timestamp', type: 'uint256', indexed: false },
-            { name: 'isPermanent', type: 'bool', indexed: false },
-            { name: 'messageId', type: 'bytes32', indexed: false }
-          ]
-        },
+        event: conversationMessageEvent,
         args: {
           conversationHash: conversationHash,
         },
-        fromBlock,
+        fromBlock: startBlock,
       });
 
       console.log(`Successfully fetched ${logs.length} conversation messages`);
@@ -433,15 +412,15 @@ export async function getConversationMessages(
       }));
     } catch (error: unknown) {
       console.error(`Conversation query with client ${i + 1} failed:`, error instanceof Error ? error.message : error);
-      
+
       // If this is the last client, return empty array
-      if (i === fallbackClients.length - 1) {
+      if (i === clients.length - 1) {
         console.warn('All RPC endpoints failed for conversation query.');
         return [];
       }
     }
   }
-  
+
   return [];
 }
 

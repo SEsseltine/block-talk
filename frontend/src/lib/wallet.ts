@@ -22,10 +22,7 @@ export function initializeWallet() {
 
 // Multiple RPC endpoints for fallback
 const BASE_SEPOLIA_RPCS = [
-  'https://sepolia.base.org',
-  'https://base-sepolia.g.alchemy.com/v2/demo',
-  'https://base-sepolia-rpc.publicnode.com',
-  'https://rpc.ankr.com/base_sepolia',
+  'https://api.developer.coinbase.com/rpc/v1/base-sepolia/slUBOi310qLmky2HbOSB8BKV3sKXRGCJ',
 ];
 
 const currentRpcIndex = 0;
@@ -44,7 +41,7 @@ export const publicClient = createPublicClient({
 });
 
 // Create alternative clients for each RPC endpoint
-export const fallbackClients = BASE_SEPOLIA_RPCS.map(rpcUrl => 
+export const fallbackClients = BASE_SEPOLIA_RPCS.map(rpcUrl =>
   createPublicClient({
     chain: baseSepolia,
     transport: http(rpcUrl, {
@@ -58,12 +55,12 @@ export async function connectWallet(): Promise<Address | null> {
   try {
     const { ethereum } = initializeWallet();
     if (!ethereum) return null;
-    
+
     // Request account access
-    const accounts = await ethereum.request({ 
-      method: 'eth_requestAccounts' 
+    const accounts = await ethereum.request({
+      method: 'eth_requestAccounts'
     }) as Address[];
-    
+
     if (accounts.length > 0) {
       // Try to switch to Base Sepolia network
       await switchToBaseSepolia();
@@ -79,7 +76,7 @@ export async function connectWallet(): Promise<Address | null> {
 export async function switchToBaseSepolia(): Promise<void> {
   const { ethereum } = initializeWallet();
   if (!ethereum) throw new Error('Wallet not found');
-  
+
   try {
     // Try to switch to Base Sepolia
     await ethereum.request({
@@ -100,7 +97,7 @@ export async function switchToBaseSepolia(): Promise<void> {
               symbol: 'ETH',
               decimals: 18,
             },
-            rpcUrls: ['https://sepolia.base.org'],
+            rpcUrls: ['https://api.developer.coinbase.com/rpc/v1/base-sepolia/slUBOi310qLmky2HbOSB8BKV3sKXRGCJ'],
             blockExplorerUrls: ['https://sepolia.basescan.org'],
           }],
         });
@@ -119,11 +116,11 @@ export async function getConnectedAccount(): Promise<Address | null> {
   try {
     const { ethereum } = initializeWallet();
     if (!ethereum) return null;
-    
-    const accounts = await ethereum.request({ 
-      method: 'eth_accounts' 
+
+    const accounts = await ethereum.request({
+      method: 'eth_accounts'
     }) as Address[];
-    
+
     return accounts.length > 0 ? accounts[0] : null;
   } catch (error) {
     console.error('Failed to get connected account:', error);
@@ -136,14 +133,14 @@ export async function ensureWalletConnected(): Promise<Address> {
   if (!account) {
     throw new Error('Wallet not connected. Please connect your wallet first.');
   }
-  
+
   // Ensure we're on the right network
   try {
     await switchToBaseSepolia();
   } catch (error) {
     console.warn('Failed to switch to Base Sepolia:', error);
   }
-  
+
   return account;
 }
 
@@ -153,21 +150,21 @@ export async function getWalletClient() {
     console.error('Ethereum provider not found');
     return null;
   }
-  
+
   // Get the connected account first
   const account = await getConnectedAccount();
   if (!account) {
     console.error('No account connected');
     return null;
   }
-  
+
   console.log('Creating wallet client with account:', account);
   const client = createWalletClient({
     account,
     chain: baseSepolia,
     transport: custom(ethereum),
   });
-  
+
   console.log('Wallet client created:', client);
   return client;
 }

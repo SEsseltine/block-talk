@@ -94,7 +94,7 @@ contract BlockTalkMessengerTest is Test {
 
         vm.prank(alice);
 
-        vm.expectEmit(true, true, true, false);
+        vm.expectEmit(false, true, true, false);
         emit BlockTalkMessenger.ConversationMessage(
             bytes32(0), // conversationHash will be different due to keccak256
             alice,

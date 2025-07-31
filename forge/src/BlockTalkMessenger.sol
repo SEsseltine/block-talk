@@ -5,7 +5,6 @@ import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
 contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
-    
     struct Message {
         address sender;
         address recipient;
@@ -17,12 +16,12 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
     mapping(address => bytes32) public messagingPublicKeys;
     mapping(bytes32 => Message) public permanentMessages;
     mapping(address => bytes32[]) public userPermanentMessages;
-    
+
     uint256 public messageCounter;
     uint256 public permanentMessageFee;
 
     event PublicKeyRegistered(address indexed user, bytes32 indexed publicKey);
-    
+
     event MessageSent(
         address indexed sender,
         address indexed recipient,
@@ -32,11 +31,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         bytes32 messageId
     );
 
-    event PermanentMessageStored(
-        bytes32 indexed messageId,
-        address indexed sender,
-        address indexed recipient
-    );
+    event PermanentMessageStored(bytes32 indexed messageId, address indexed sender, address indexed recipient);
 
     error NotRegistered(address user);
     error RecipientNotRegistered(address recipient);
@@ -54,15 +49,11 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         emit PublicKeyRegistered(msg.sender, _publicKey);
     }
 
-    function sendMessage(
-        address _recipient,
-        string calldata _encryptedContent,
-        bool _makePermanent
-    ) external payable {
+    function sendMessage(address _recipient, string calldata _encryptedContent, bool _makePermanent) external payable {
         if (messagingPublicKeys[msg.sender] == bytes32(0)) {
             revert NotRegistered(msg.sender);
         }
-        
+
         if (messagingPublicKeys[_recipient] == bytes32(0)) {
             revert RecipientNotRegistered(_recipient);
         }
@@ -71,22 +62,10 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
             revert InsufficientFee(permanentMessageFee, msg.value);
         }
 
-        bytes32 messageId = keccak256(abi.encodePacked(
-            msg.sender,
-            _recipient,
-            _encryptedContent,
-            block.timestamp,
-            messageCounter++
-        ));
+        bytes32 messageId =
+            keccak256(abi.encodePacked(msg.sender, _recipient, _encryptedContent, block.timestamp, messageCounter++));
 
-        emit MessageSent(
-            msg.sender,
-            _recipient,
-            _encryptedContent,
-            block.timestamp,
-            _makePermanent,
-            messageId
-        );
+        emit MessageSent(msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId);
 
         if (_makePermanent) {
             Message storage message = permanentMessages[messageId];
@@ -105,7 +84,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
 
     function getMessage(bytes32 _messageId) external view returns (Message memory) {
         Message memory message = permanentMessages[_messageId];
-        
+
         if (message.sender == address(0)) {
             revert MessageNotFound(_messageId);
         }
@@ -134,7 +113,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
     }
 
     function withdrawFees() external onlyOwner {
-        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
+        (bool success,) = payable(owner()).call{value: address(this).balance}("");
         require(success, "Transfer failed");
     }
 

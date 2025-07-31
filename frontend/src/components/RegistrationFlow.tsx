@@ -27,7 +27,7 @@ export function RegistrationFlow({ account, onComplete }: RegistrationFlowProps)
       setStep('signing');
       
       // Register public key on blockchain
-      const txHash = await registerPublicKey(account, publicKeyHex);
+      await registerPublicKey(account, publicKeyHex);
       
       setStep('complete');
       
@@ -70,7 +70,7 @@ export function RegistrationFlow({ account, onComplete }: RegistrationFlowProps)
               <div className="space-y-2 text-sm text-blue-800">
                 <div className="flex items-start space-x-3">
                   <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-                  <span>You'll sign a message with your wallet to generate encryption keys</span>
+                  <span>You&apos;ll sign a message with your wallet to generate encryption keys</span>
                 </div>
                 <div className="flex items-start space-x-3">
                   <span className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>

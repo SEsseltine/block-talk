@@ -17,10 +17,10 @@ export async function deriveEncryptionKeys(address: Address): Promise<Encryption
       message: SIGNING_MESSAGE,
     });
 
-    // Convert signature to seed
+    // Convert signature to seed for deterministic key generation
     const encoder = new TextEncoder();
     const signatureBytes = encoder.encode(signature);
-    const seed = await crypto.subtle.digest('SHA-256', signatureBytes);
+    await crypto.subtle.digest('SHA-256', signatureBytes);
 
     // Generate encryption keypair from seed
     const keyPair = await crypto.subtle.generateKey(

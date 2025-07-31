@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { type Address } from 'viem';
 
 interface MessagingInterfaceProps {
   account: Address;
 }
 
-export function MessagingInterface({ account }: MessagingInterfaceProps) {
+export function MessagingInterface({ }: MessagingInterfaceProps) {
   const [selectedContact, setSelectedContact] = useState<Address | null>(null);
   const [newContactAddress, setNewContactAddress] = useState('');
   const [showAddContact, setShowAddContact] = useState(false);

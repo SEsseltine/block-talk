@@ -1,4 +1,4 @@
-import { type Address, type Hash, parseEther, formatEther } from 'viem';
+import { type Address, type Hash, formatEther } from 'viem';
 import { publicClient, walletClient } from './wallet';
 
 // Contract ABI - generated from our Solidity contract

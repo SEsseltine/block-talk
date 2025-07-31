@@ -1,5 +1,5 @@
 import { type Address, type Hash, formatEther } from 'viem';
-import { publicClient, walletClient } from './wallet';
+import { publicClient, getWalletClient } from './wallet';
 
 // Contract ABI - generated from our Solidity contract
 export const BLOCK_TALK_ABI = [
@@ -116,6 +116,11 @@ export async function registerPublicKey(
   account: Address,
   publicKeyHex: string
 ): Promise<Hash> {
+  const walletClient = getWalletClient();
+  if (!walletClient) {
+    throw new Error('Wallet not connected');
+  }
+  
   // Convert hex string to bytes32
   const publicKeyBytes32 = `0x${publicKeyHex.slice(0, 64).padEnd(64, '0')}` as Hash;
   
@@ -136,7 +141,12 @@ export async function sendMessage(
   encryptedContent: string,
   makePermanent: boolean = false
 ): Promise<Hash> {
-  let value = 0n;
+  const walletClient = getWalletClient();
+  if (!walletClient) {
+    throw new Error('Wallet not connected');
+  }
+  
+  let value = BigInt(0);
   
   if (makePermanent) {
     // Get permanent message fee
@@ -144,7 +154,7 @@ export async function sendMessage(
       address: CONTRACT_ADDRESS,
       abi: BLOCK_TALK_ABI,
       functionName: 'permanentMessageFee',
-    });
+    }) as bigint;
   }
 
   const hash = await walletClient.writeContract({
@@ -165,14 +175,14 @@ export async function getMessage(messageId: Hash): Promise<Message> {
     abi: BLOCK_TALK_ABI,
     functionName: 'getMessage',
     args: [messageId],
-  });
+  }) as { sender: Address; recipient: Address; encryptedContent: string; timestamp: bigint; isPermanent: boolean };
 
   return {
-    sender: result[0],
-    recipient: result[1],
-    encryptedContent: result[2],
-    timestamp: result[3],
-    isPermanent: result[4],
+    sender: result.sender,
+    recipient: result.recipient,
+    encryptedContent: result.encryptedContent,
+    timestamp: result.timestamp,
+    isPermanent: result.isPermanent,
   };
 }
 
@@ -182,7 +192,7 @@ export async function getPublicKey(userAddress: Address): Promise<string | null>
     abi: BLOCK_TALK_ABI,
     functionName: 'getPublicKey',
     args: [userAddress],
-  });
+  }) as Hash;
 
   // Convert bytes32 to hex string, removing padding
   const hex = result.slice(2); // Remove 0x prefix
@@ -196,7 +206,7 @@ export async function isRegistered(userAddress: Address): Promise<boolean> {
     abi: BLOCK_TALK_ABI,
     functionName: 'isRegistered',
     args: [userAddress],
-  });
+  }) as boolean;
 }
 
 export async function getUserPermanentMessages(userAddress: Address): Promise<Hash[]> {
@@ -205,12 +215,12 @@ export async function getUserPermanentMessages(userAddress: Address): Promise<Ha
     abi: BLOCK_TALK_ABI,
     functionName: 'getUserPermanentMessages',
     args: [userAddress],
-  });
+  }) as Hash[];
 }
 
 export async function getMessageEvents(
   userAddress?: Address,
-  fromBlock: bigint = 0n
+  fromBlock: bigint = BigInt(0)
 ): Promise<MessageEvent[]> {
   const logs = await publicClient.getLogs({
     address: CONTRACT_ADDRESS,
@@ -250,7 +260,7 @@ export async function getPermanentMessageFee(): Promise<string> {
     address: CONTRACT_ADDRESS,
     abi: BLOCK_TALK_ABI,
     functionName: 'permanentMessageFee',
-  });
+  }) as bigint;
 
   return formatEther(fee);
 }

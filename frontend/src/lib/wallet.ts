@@ -2,26 +2,34 @@ import CoinbaseWalletSDK from '@coinbase/wallet-sdk';
 import { createPublicClient, createWalletClient, custom, http, type Address } from 'viem';
 import { baseSepolia } from 'viem/chains';
 
-export const coinbaseWallet = new CoinbaseWalletSDK({
-  appName: 'BlockTalk',
-  appLogoUrl: 'https://example.com/logo.png', // Replace with actual logo
-  darkMode: false,
-});
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
 
-export const ethereum = coinbaseWallet.makeWeb3Provider();
+let coinbaseWallet: CoinbaseWalletSDK | null = null;
+let ethereum: EthereumProvider | null = null;
+
+function initializeWallet() {
+  if (typeof window !== 'undefined' && !coinbaseWallet) {
+    coinbaseWallet = new CoinbaseWalletSDK({
+      appName: 'BlockTalk',
+      appLogoUrl: 'https://example.com/logo.png', // Replace with actual logo
+    });
+    ethereum = coinbaseWallet.makeWeb3Provider() as EthereumProvider;
+  }
+  return { coinbaseWallet, ethereum };
+}
 
 export const publicClient = createPublicClient({
   chain: baseSepolia,
   transport: http('https://sepolia.base.org'),
 });
 
-export const walletClient = createWalletClient({
-  chain: baseSepolia,
-  transport: custom(ethereum),
-});
-
 export async function connectWallet(): Promise<Address | null> {
   try {
+    const { ethereum } = initializeWallet();
+    if (!ethereum) return null;
+    
     const accounts = await ethereum.request({ 
       method: 'eth_requestAccounts' 
     }) as Address[];
@@ -38,6 +46,9 @@ export async function connectWallet(): Promise<Address | null> {
 
 export async function getConnectedAccount(): Promise<Address | null> {
   try {
+    const { ethereum } = initializeWallet();
+    if (!ethereum) return null;
+    
     const accounts = await ethereum.request({ 
       method: 'eth_accounts' 
     }) as Address[];
@@ -47,4 +58,14 @@ export async function getConnectedAccount(): Promise<Address | null> {
     console.error('Failed to get connected account:', error);
     return null;
   }
+}
+
+export function getWalletClient() {
+  const { ethereum } = initializeWallet();
+  if (!ethereum) return null;
+  
+  return createWalletClient({
+    chain: baseSepolia,
+    transport: custom(ethereum),
+  });
 }

@@ -1,5 +1,5 @@
 import { type Address } from 'viem';
-import { walletClient } from './wallet';
+import { getWalletClient } from './wallet';
 
 const SIGNING_MESSAGE = "BlockTalk Encryption Key Generation";
 
@@ -11,6 +11,11 @@ export interface EncryptionKeyPair {
 
 export async function deriveEncryptionKeys(address: Address): Promise<EncryptionKeyPair> {
   try {
+    const walletClient = getWalletClient();
+    if (!walletClient) {
+      throw new Error('Wallet not connected');
+    }
+    
     // Get deterministic signature from wallet
     const signature = await walletClient.signMessage({
       account: address,

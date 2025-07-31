@@ -31,6 +31,16 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         bytes32 messageId
     );
 
+    event ConversationMessage(
+        bytes32 indexed conversationHash,
+        address indexed sender,
+        address indexed recipient,
+        string encryptedContent,
+        uint256 timestamp,
+        bool isPermanent,
+        bytes32 messageId
+    );
+
     event PermanentMessageStored(bytes32 indexed messageId, address indexed sender, address indexed recipient);
 
     error NotRegistered(address user);
@@ -65,7 +75,13 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         bytes32 messageId =
             keccak256(abi.encodePacked(msg.sender, _recipient, _encryptedContent, block.timestamp, messageCounter++));
 
+        // Create deterministic conversation hash (smaller address first for consistency)
+        bytes32 conversationHash = _recipient < msg.sender 
+            ? keccak256(abi.encodePacked(_recipient, msg.sender))
+            : keccak256(abi.encodePacked(msg.sender, _recipient));
+
         emit MessageSent(msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId);
+        emit ConversationMessage(conversationHash, msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId);
 
         if (_makePermanent) {
             Message storage message = permanentMessages[messageId];

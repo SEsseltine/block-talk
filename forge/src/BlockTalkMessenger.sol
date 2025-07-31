@@ -32,11 +32,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         bytes32 messageId
     );
 
-    event PermanentMessageStored(
-        bytes32 indexed messageId,
-        address indexed sender,
-        address indexed recipient
-    );
+    event PermanentMessageStored(bytes32 indexed messageId, address indexed sender, address indexed recipient);
 
     error NotRegistered(address user);
     error RecipientNotRegistered(address recipient);
@@ -54,11 +50,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         emit PublicKeyRegistered(msg.sender, _publicKey);
     }
 
-    function sendMessage(
-        address _recipient,
-        string calldata _encryptedContent,
-        bool _makePermanent
-    ) external payable {
+    function sendMessage(address _recipient, string calldata _encryptedContent, bool _makePermanent) external payable {
         if (messagingPublicKeys[msg.sender] == bytes32(0)) {
             revert NotRegistered(msg.sender);
         }
@@ -71,15 +63,8 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
             revert InsufficientFee(permanentMessageFee, msg.value);
         }
 
-        bytes32 messageId = keccak256(
-            abi.encodePacked(
-                msg.sender,
-                _recipient,
-                _encryptedContent,
-                block.timestamp,
-                messageCounter++
-            )
-        );
+        bytes32 messageId =
+            keccak256(abi.encodePacked(msg.sender, _recipient, _encryptedContent, block.timestamp, messageCounter++));
 
         // Create deterministic conversation hash (smaller address first for consistency)
         bytes32 conversationHash = _recipient < msg.sender
@@ -87,13 +72,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
             : keccak256(abi.encodePacked(msg.sender, _recipient));
 
         emit ConversationMessage(
-            conversationHash,
-            msg.sender,
-            _recipient,
-            _encryptedContent,
-            block.timestamp,
-            _makePermanent,
-            messageId
+            conversationHash, msg.sender, _recipient, _encryptedContent, block.timestamp, _makePermanent, messageId
         );
 
         if (_makePermanent) {
@@ -111,9 +90,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         }
     }
 
-    function getMessage(
-        bytes32 _messageId
-    ) external view returns (Message memory) {
+    function getMessage(bytes32 _messageId) external view returns (Message memory) {
         Message memory message = permanentMessages[_messageId];
 
         if (message.sender == address(0)) {
@@ -127,9 +104,7 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
         return message;
     }
 
-    function getUserPermanentMessages(
-        address _user
-    ) external view returns (bytes32[] memory) {
+    function getUserPermanentMessages(address _user) external view returns (bytes32[] memory) {
         return userPermanentMessages[_user];
     }
 
@@ -146,13 +121,9 @@ contract BlockTalkMessenger is UUPSUpgradeable, Ownable {
     }
 
     function withdrawFees() external onlyOwner {
-        (bool success, ) = payable(owner()).call{value: address(this).balance}(
-            ""
-        );
+        (bool success,) = payable(owner()).call{value: address(this).balance}("");
         require(success, "Transfer failed");
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

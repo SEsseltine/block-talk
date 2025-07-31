@@ -7,6 +7,11 @@ interface MessagingInterfaceProps {
   account: Address;
 }
 
+interface DecryptedMessage extends MessageEvent {
+  decryptedContent: string;
+  isFromMe: boolean;
+}
+
 export function MessagingInterface({ account }: MessagingInterfaceProps) {
   const [selectedContact, setSelectedContact] = useState<Address | null>(null);
   const [newContactAddress, setNewContactAddress] = useState('');
@@ -15,7 +20,7 @@ export function MessagingInterface({ account }: MessagingInterfaceProps) {
   const [messageText, setMessageText] = useState('');
   const [makePermanent, setMakePermanent] = useState(false);
   const [sending, setSending] = useState(false);
-  const [messages, setMessages] = useState<MessageEvent[]>([]);
+  const [messages, setMessages] = useState<DecryptedMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [rpcError, setRpcError] = useState(false);
 
@@ -98,8 +103,7 @@ export function MessagingInterface({ account }: MessagingInterfaceProps) {
       // Encrypt the message
       const encryptedContent = await encryptMessage(
         messageText,
-        recipientPublicKeyBytes,
-        senderKeys.privateKey
+        recipientPublicKeyBytes
       );
 
       // Send the encrypted message on-chain

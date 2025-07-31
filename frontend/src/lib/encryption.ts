@@ -36,7 +36,7 @@ export async function deriveEncryptionKeys(address: Address): Promise<Encryption
         method: 'personal_sign',
         params: [SIGNING_MESSAGE, address.toLowerCase()],
       }) as string;
-    } catch (error) {
+    } catch {
       console.log('String message failed, trying hex encoding...');
       const messageHex = `0x${Buffer.from(SIGNING_MESSAGE, 'utf8').toString('hex')}`;
       signature = await ethereum.request({
@@ -89,8 +89,7 @@ export async function deriveEncryptionKeys(address: Address): Promise<Encryption
 
 export async function encryptMessage(
   message: string,
-  recipientPublicKeyBytes: Uint8Array,
-  _senderPrivateKey: CryptoKey
+  recipientPublicKeyBytes: Uint8Array
 ): Promise<string> {
   try {
     console.log('Starting message encryption...');
